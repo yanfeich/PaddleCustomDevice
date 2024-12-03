@@ -83,16 +83,14 @@ void FusedDotProductAttentionKernel(
     const phi::DenseTensor &q,
     const phi::DenseTensor &k,
     const phi::DenseTensor &v,
-    const phi::DenseTensor &mask,
-    // const paddle::optional<phi::DenseTensor> &attention_mask,
-    // const paddle::optional<phi::DenseTensor> &cu_seqlen_q,
-    // const paddle::optional<phi::DenseTensor> &cu_seqlen_kv,
+    const paddle::optional<phi::DenseTensor> &attention_mask,
+    const paddle::optional<phi::DenseTensor> &cu_seqlen_q,
+    const paddle::optional<phi::DenseTensor> &cu_seqlen_kv,
     float scaling_factor,
     float dropout_probability,
     bool is_training,
-    bool is_causal_masking,
-    // const std::string &mask_type_str,
-    // const std::string &bias_type_str,
+    const std::string &mask_type_str,
+    const std::string &bias_type_str,
     phi::DenseTensor *out,
     phi::DenseTensor *softmax_out,
     phi::DenseTensor *rng_state) {
@@ -132,12 +130,9 @@ void FusedDotProductAttentionKernel(
   ct.Add(qt);
   ct.Add(kt);
   ct.Add(vt);
-  ct.Add(mask);
-  /*
   if (attention_mask.get_ptr()) {
     ct.Add(attention_mask.get_ptr());
   }
-  */
   ct.Add(out, false);
   if (is_training) {
     ct.Add(softmax_out, false);
@@ -149,8 +144,7 @@ void FusedDotProductAttentionKernel(
   ns_Sdpa::ParamsV2 params;
   memset(reinterpret_cast<void *>(&params), 0x00, sizeof(ns_Sdpa::ParamsV2));
   params.scale = scaling_factor;
-  params.is_causal = is_causal_masking;
-  // params.is_causal = (mask_type_str == "causal");
+  params.is_causal = (mask_type_str == "causal");
   params.dropout.ratio = dropout_probability;
   params.dropout.disableMaskOut = false;
   params.is_inference = !is_training;
