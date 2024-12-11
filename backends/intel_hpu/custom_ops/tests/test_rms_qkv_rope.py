@@ -16,7 +16,7 @@ import paddle
 from paddlenlp.transformers.llama.modeling import LlamaRotaryEmbedding
 import paddlenlp_ops
 
-paddle.device.set_device("intel_hpu:6")
+paddle.device.set_device("intel_hpu")
 
 paddle.seed(102)
 
