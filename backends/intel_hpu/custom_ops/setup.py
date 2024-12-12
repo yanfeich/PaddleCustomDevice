@@ -29,6 +29,8 @@ setup(
             sources=[
                 "./src/index_copy.cc",
                 "./src/fake_gpu_kernels.cc",
+                "./llama_infer/fused_rms_qkv_rope.cc",
+                "./llama_infer/fused_sdpa_proj.cc",
             ],
             include_dirs=[
                 "../",
