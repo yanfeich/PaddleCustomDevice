@@ -406,8 +406,6 @@ void FusedRmsQkvRopeKernelV2(const Context& dev_ctx,
                              phi::DenseTensor* query_states,
                              phi::DenseTensor* key_states,
                              phi::DenseTensor* value_states,
-                             phi::DenseTensor* debugc,
-                             phi::DenseTensor* debugs,
                              const phi::Scalar& epsilon,
                              const phi::Scalar& head_dim,
                              const phi::Scalar& num_head) {
@@ -424,12 +422,10 @@ void FusedRmsQkvRopeKernelV2(const Context& dev_ctx,
   std::vector<int64_t> out_k_dim = phi::vectorize<int64_t>(key_states->dims());
   std::vector<int64_t> out_v_dim =
       phi::vectorize<int64_t>(value_states->dims());
-  std::vector<int64_t> out_debug_dim = phi::vectorize<int64_t>(debugc->dims());
 
   std::vector<DIMS> inputs = {
       src_dims, ln_scales_dims, qkv_weights_dims, rotary_embs_dims};
-  std::vector<DIMS> outputs = {
-      out_q_dim, out_k_dim, out_v_dim, out_debug_dim, out_debug_dim};
+  std::vector<DIMS> outputs = {out_q_dim, out_k_dim, out_v_dim};
 
   int head_dim_ = head_dim.to<int>();
   int num_head_ = num_head.to<int>();
@@ -473,8 +469,6 @@ void FusedRmsQkvRopeKernelV2(const Context& dev_ctx,
   tensors["query_states"] = reinterpret_cast<uint64_t>(query_states->data<T>());
   tensors["key_states"] = reinterpret_cast<uint64_t>(key_states->data<T>());
   tensors["value_states"] = reinterpret_cast<uint64_t>(value_states->data<T>());
-  tensors["debugc"] = reinterpret_cast<uint64_t>(debugc->data<T>());
-  tensors["debugs"] = reinterpret_cast<uint64_t>(debugs->data<T>());
 
   RecipeRunner runner(recipe);
   runner.Run(reinterpret_cast<C_Stream>(dev_ctx.stream()), tensors);
@@ -490,8 +484,6 @@ void CallFusedRmsQkvRopeKernelV2(const Context& dev_ctx,
                                  phi::DenseTensor* query_states,
                                  phi::DenseTensor* key_states,
                                  phi::DenseTensor* value_states,
-                                 phi::DenseTensor* debugc,
-                                 phi::DenseTensor* debugs,
                                  const phi::Scalar& epsilon,
                                  const phi::Scalar& head_dim,
                                  const phi::Scalar& num_head) {
@@ -504,8 +496,6 @@ void CallFusedRmsQkvRopeKernelV2(const Context& dev_ctx,
                                                                 query_states,
                                                                 key_states,
                                                                 value_states,
-                                                                debugc,
-                                                                debugs,
                                                                 epsilon,
                                                                 head_dim,
                                                                 num_head);
@@ -518,8 +508,6 @@ void CallFusedRmsQkvRopeKernelV2(const Context& dev_ctx,
                                                                  query_states,
                                                                  key_states,
                                                                  value_states,
-                                                                 debugc,
-                                                                 debugs,
                                                                  epsilon,
                                                                  head_dim,
                                                                  num_head);
@@ -566,16 +554,6 @@ std::vector<paddle::Tensor> FusedRmsQkvRopeV2(const paddle::Tensor& src,
   value_states->Resize(phi::make_ddim({bsz, kv_num_head, seq_len, head_dim}));
   dev_ctx->Alloc(value_states.get(), src_tensor->dtype());
 
-  std::shared_ptr<phi::DenseTensor> debugc =
-      std::make_shared<phi::DenseTensor>();
-  debugc->Resize(phi::make_ddim({bsz, 1, seq_len, head_dim}));
-  dev_ctx->Alloc(debugc.get(), src_tensor->dtype());
-
-  std::shared_ptr<phi::DenseTensor> debugs =
-      std::make_shared<phi::DenseTensor>();
-  debugs->Resize(phi::make_ddim({bsz, 1, seq_len, head_dim}));
-  dev_ctx->Alloc(debugs.get(), src_tensor->dtype());
-
   CallFusedRmsQkvRopeKernelV2(*dev_ctx,
                               *src_tensor,
                               *ln_scales_tensor,
@@ -584,16 +562,12 @@ std::vector<paddle::Tensor> FusedRmsQkvRopeV2(const paddle::Tensor& src,
                               query_states.get(),
                               key_states.get(),
                               value_states.get(),
-                              debugc.get(),
-                              debugs.get(),
                               phi::Scalar(epsilon),
                               phi::Scalar(head_dim),
                               phi::Scalar(num_head));
   return {paddle::Tensor(query_states),
           paddle::Tensor(key_states),
-          paddle::Tensor(value_states),
-          paddle::Tensor(debugc),
-          paddle::Tensor(debugs)};
+          paddle::Tensor(value_states)};
 }
 
 std::vector<std::vector<int64_t>> FusedRmsQkvRopeV2Shape(
@@ -610,9 +584,7 @@ std::vector<std::vector<int64_t>> FusedRmsQkvRopeV2Shape(
   int kv_num_head = (fused_hidden_size - num_head * head_dim) / head_dim / 2;
   return {{bsz, num_head, seq_len, head_dim},
           {bsz, kv_num_head, seq_len, head_dim},
-          {bsz, kv_num_head, seq_len, head_dim},
-          {bsz, 1, seq_len, head_dim},
-          {bsz, 1, seq_len, head_dim}};
+          {bsz, kv_num_head, seq_len, head_dim}};
 }
 
 std::vector<paddle::DataType> FusedRmsQkvRopeV2Dtype(
@@ -625,7 +597,7 @@ std::vector<paddle::DataType> FusedRmsQkvRopeV2Dtype(
 
 PD_BUILD_OP(fused_rms_qkv_rope_v2)
     .Inputs({"src", "ln_scales", "qkv_weights", "rotary_embs"})
-    .Outputs({"query_states", "key_states", "value_states", "debugc", "debugs"})
+    .Outputs({"query_states", "key_states", "value_states"})
     .Attrs({"epsilon: float", "head_dim: int", "num_head: int"})
     .SetKernelFn(PD_KERNEL(FusedRmsQkvRopeV2))
     .SetInferShapeFn(PD_INFER_SHAPE(FusedRmsQkvRopeV2Shape))
