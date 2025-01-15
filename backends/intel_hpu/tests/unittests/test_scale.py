@@ -53,12 +53,13 @@ class TestHpuScaleOp(OpTest):
     def init_input(self):
         self.scale = 2.8
         self.bias = 3.2
-        self.bias_after_scale = False
+        self.bias_after_scale = True
         np.random.seed(1024)
         self.x = np.random.random((2, 3, 4)).astype(self.dtype)
-        self.out = self.x * self.scale + (
-            self.bias if self.bias_after_scale else self.scale * self.bias
-        )
+        self.out = (
+            self.x * self.scale
+            + (self.bias if self.bias_after_scale else self.scale * self.bias)
+        ).astype(self.dtype)
 
 
 class TestFP16Scale(TestHpuScaleOp):

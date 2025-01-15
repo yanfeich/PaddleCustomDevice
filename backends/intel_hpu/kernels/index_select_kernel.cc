@@ -1,4 +1,4 @@
-// Copyright (c) 2024 PaddlePaddle Authors. All Rights Reserved.
+// Copyright (c) 2022 PaddlePaddle Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License"); you may
 // not use this file except in compliance with the License.
@@ -11,21 +11,23 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+#include "habanalabs/perf_lib_layer_params.h"
 #include "kernels/funcs.h"
 #include "kernels/hpu_operator.h"
 #include "utils/utils.h"
 
 namespace custom_kernel {
 
-struct EinsumParams {
-  synEinsumParams params;
+struct IndexSelectParams {
+  ns_GatherKernel::Params params;
 };
 
-class Einsum : public HpuOperator {
+class IndexSelect : public HpuOperator {
  public:
-  Einsum() : HpuOperator("einsum") {}
+  IndexSelect() : HpuOperator("gather_fwd_") {}
 
-  void AddNode(ConvertTensors& ct, EinsumParams& params) {
+  void AddNode(ConvertTensors& ct, IndexSelectParams& params) {
     auto inputs = ct.GetTensors();
     auto outputs = ct.GetTensors(false);
 
@@ -47,7 +49,7 @@ class Einsum : public HpuOperator {
                                          outputs[i].name));
     }
 
-    guid_ = guid_ + "_" + SynDataTypeToStr(inputs[0].type);
+    guid_ = guid_ + SynDataTypeToStr(inputs[0].type);
 
     synStatus status = synNodeCreate(graphHandle_,
                                      syn_inputs.data(),
@@ -57,7 +59,7 @@ class Einsum : public HpuOperator {
                                      &params.params,
                                      sizeof(params.params),
                                      guid_.c_str(),
-                                     "Einsum",
+                                     "index_select",
                                      nullptr,
                                      nullptr);
     PD_CHECK(
@@ -66,29 +68,32 @@ class Einsum : public HpuOperator {
 };
 
 template <typename T, typename Context>
-void EinsumKernel(const Context& dev_ctx,
-                  const std::vector<const phi::DenseTensor*>& inputs,
-                  const std::string& equation,
-                  phi::DenseTensor* out,
-                  std::vector<phi::DenseTensor*> cache,
-                  std::vector<phi::DenseTensor*> xshape UNUSED) {
+void IndexSelectKernel(const Context& dev_ctx,
+                       const phi::DenseTensor& x,
+                       const phi::DenseTensor& index,
+                       int dim,
+                       phi::DenseTensor* out) {
+  VLOG(4) << "Call intel_hpu IndexSelectKernel";
   dev_ctx.template Alloc<T>(out);
-  ConvertTensors ct;
-  for (size_t i = 0; i < inputs.size(); i++) {
-    ct.Add(inputs[i]);
-  }
 
+  ConvertTensors ct;
+  ct.Add(x);
+  ct.Add(index);
   ct.Add(out, false);
 
-  OpCacheOperator op_info;
-  EinsumParams params;
-  params.params = synEinsumParams(equation.c_str());
-  std::vector<DIMS> inputs_dims = ct.GetDims();
-  op_info.prepareOpInfo<T, EinsumParams>("EinsumKernel", inputs_dims, &params);
-  auto recipe = op_info.GetRecipe();
+  if (dim < 0) {
+    dim += x.dims().size();
+  }
 
+  OpCacheOperator op_info;
+  IndexSelectParams params;
+  params.params.axis = static_cast<int32_t>(x.dims().size()) - 1 - dim;
+  std::vector<DIMS> inputs_dims = ct.GetDims();
+  op_info.prepareOpInfo<T, IndexSelectParams>(
+      "IndexSelectKernel", inputs_dims, &params);
+  auto recipe = op_info.GetRecipe();
   if (recipe == nullptr) {
-    Einsum op;
+    IndexSelect op;
 
     op.AddNode(ct, params);
     op.Compile();
@@ -101,13 +106,15 @@ void EinsumKernel(const Context& dev_ctx,
   RecipeRunner runner(recipe);
   runner.Run(reinterpret_cast<C_Stream>(dev_ctx.stream()), tensors);
 }
+
 }  // namespace custom_kernel
 
-PD_REGISTER_PLUGIN_KERNEL(einsum,
+PD_REGISTER_PLUGIN_KERNEL(index_select,
                           intel_hpu,
                           ALL_LAYOUT,
-                          custom_kernel::EinsumKernel,
+                          custom_kernel::IndexSelectKernel,
+                          phi::dtype::float16,
+                          phi::dtype::bfloat16,
                           float,
                           int32_t,
-                          phi::dtype::bfloat16,
-                          phi::dtype::float16) {}
+                          int64_t) {}
