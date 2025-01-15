@@ -557,6 +557,7 @@ PD_REGISTER_PLUGIN_KERNEL(equal,
                           uint8_t,
                           int16_t,
                           int32_t,
+                          int64_t,
                           bool) {}
 
 PD_REGISTER_PLUGIN_KERNEL(equal_raw,
@@ -579,6 +580,7 @@ PD_REGISTER_PLUGIN_KERNEL(less_than,
                           float,
                           uint8_t,
                           int32_t,
+                          int64_t,
                           bool) {}
 
 PD_REGISTER_PLUGIN_KERNEL(less_than_raw,
@@ -644,6 +646,7 @@ PD_REGISTER_PLUGIN_KERNEL(greater_equal,
                           float,
                           uint8_t,
                           int32_t,
+                          int64_t,
                           bool) {}
 
 PD_REGISTER_PLUGIN_KERNEL(greater_equal_raw,
