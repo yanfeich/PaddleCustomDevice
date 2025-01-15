@@ -55,7 +55,7 @@ class Range : public HpuOperator {
 class RangeI64 : public HpuOperator {
  public:
   RangeI64() : HpuOperator("range") {}
-  void AddNodeI64(ConvertTensors& ct, RangeParams& params) {
+  void AddNode(ConvertTensors& ct, RangeParams& params) {
     auto outputs = ct.GetTensors(false);
 
     std::vector<synTensor> range_out;

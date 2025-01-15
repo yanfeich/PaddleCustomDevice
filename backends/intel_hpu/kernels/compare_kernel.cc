@@ -345,7 +345,7 @@ void LessThanRawKernel(const Context& dev_ctx,
   if (recipe == nullptr) {
     if (x.dtype() == phi::DataType::INT64) {
       CompareCast op;
-      op.AddNodeCast(ct, params);
+      op.AddNode(ct, params);
       op.Compile();
       op_info.setOp(op);
       recipe = op_info.GetRecipe();
@@ -396,7 +396,7 @@ void LessEqualRawKernel(const Context& dev_ctx,
   if (recipe == nullptr) {
     if (x.dtype() == phi::DataType::INT64) {
       CompareCast op;
-      op.AddNodeCast(ct, params);
+      op.AddNode(ct, params);
       op.Compile();
       op_info.setOp(op);
       recipe = op_info.GetRecipe();
@@ -447,7 +447,7 @@ void GreaterThanRawKernel(const Context& dev_ctx,
   if (recipe == nullptr) {
     if (x.dtype() == phi::DataType::INT64) {
       CompareCast op;
-      op.AddNodeCast(ct, params);
+      op.AddNode(ct, params);
       op.Compile();
       op_info.setOp(op);
       recipe = op_info.GetRecipe();
@@ -498,7 +498,7 @@ void GreaterEqualRawKernel(const Context& dev_ctx,
   if (recipe == nullptr) {
     if (x.dtype() == phi::DataType::INT64) {
       CompareCast op;
-      op.AddNodeCast(ct, params);
+      op.AddNode(ct, params);
       op.Compile();
       op_info.setOp(op);
       recipe = op_info.GetRecipe();
