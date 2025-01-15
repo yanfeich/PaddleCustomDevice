@@ -300,7 +300,7 @@ class ScaleCast : public HpuOperator {
              status);
 
     std::vector<synTensor> final_cast_in;
-    final_cast_in.push_back(x_tensor);
+    final_cast_in.push_back(x_add);
 
     std::vector<synTensor> final_cast_out;
     auto out_tensor = createTensor(outputs[0].dims.size(),
@@ -344,13 +344,8 @@ void ScaleKernel(const Context& dev_ctx,
   std::vector<DIMS> inputs_dims = ct.GetDims();
 
   ScaleParams params;
-  auto scale = in_scale.to<T>();
-  auto bias = in_bias.to<T>();
-  if ((x.dtype() == phi::DataType::INT32) ||
-      (x.dtype() == phi::DataType::INT64)) {
-    scale = in_scale.to<float>();
-    bias = in_bias.to<float>();
-  }
+  auto scale = in_scale.to<float>();
+  auto bias = in_bias.to<float>();
 
   if (!bias_after_scale) {
     bias = bias * scale;
@@ -363,7 +358,7 @@ void ScaleKernel(const Context& dev_ctx,
   auto recipe = op_info.GetRecipe();
 
   if (recipe == nullptr) {
-    if (typeid(T).name() != typeid(scale).name()) {
+    if (x.dtype() != phi::DataType::FLOAT32) {
       ScaleCast op;
 
       op.AddNode(ct, params);
