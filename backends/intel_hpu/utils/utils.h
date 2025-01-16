@@ -120,6 +120,9 @@ class OpCacheOperator {
     } else if (std::is_same<T, phi::dtype::float8_e4m3fn>::value) {
       datatype_ = syn_type_fp8_143;
       guid_ = guid_prefix + "_hf8";
+    } else if (std::is_same<T, int16_t>::value) {
+      datatype_ = syn_type_int16;
+      guid_ = guid_prefix + "_i16";
     } else if (std::is_same<T, int32_t>::value) {
       datatype_ = syn_type_int32;
       guid_ = guid_prefix + "_i32";
