@@ -1,4 +1,4 @@
-// Copyright (c) 2024 PaddlePaddle Authors. All Rights Reserved.
+// Copyright (c) 2025 PaddlePaddle Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,11 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
+#include "paddle/common/flags.h"
 
-#include "paddle/pir/include/pass/pass_registry.h"
+#include <string>
 
-USE_PIR_PASS(addn_replace_pass);
-USE_PIR_PASS(gcu_op_marker_pass);
-USE_PIR_PASS(gcu_sub_graph_extract_pass);
-USE_PIR_PASS(gcu_replace_with_engine_op_pass);
+#include "runtime/flags.h"
+
+FLAGS_DEFINE_int32(custom_engine_min_group_size,
+                   3,
+                   "when the custom device subgraph size is not larger than "
+                   "`custom_engine_min_group_size`, the group will fallback to "
+                   "original graph.");
